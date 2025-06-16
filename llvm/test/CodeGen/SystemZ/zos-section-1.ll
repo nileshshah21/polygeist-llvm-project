@@ -106,8 +106,8 @@ entry:
 
 ; Text record for the code section C_CODE64.
 ; The regular expression matches the lower byte of the length.
-; CHECK-NEXT: 0000320 03 11 00 00 [[C_CODE64]] 00 00 00 00 00 00 00 00
-; CHECK-NEXT: 0000330 00 00 00 00 00 00 00 {{..}} 00 c3 00 c5 00 c5 00 f1
+; CHECK-NEXT: 000320 03 11 00 00 [[C_CODE64]] 00 00 00 00 00 00 00 00
+; CHECK-NEXT: 000330 00 00 00 00 00 00 00 {{..}} 00 c3 00 c5 00 c5 00 f1
 
 ; Text record for the section .&ppa2.
 ; CHECK:      0003c0 03 10 00 00 [[PPA2]] 00 00 00 00 00 00 00 00
