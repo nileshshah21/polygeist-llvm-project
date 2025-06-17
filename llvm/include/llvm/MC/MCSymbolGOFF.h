@@ -28,10 +28,10 @@ class MCSymbolGOFF : public MCSymbol {
   GOFF::LDAttr LDAttributes;
 
   enum SymbolFlags : uint16_t {
-    SF_LD = 0x01,       // LD attributes are set.
-                        // Leave place for EX attributes.
-    SF_Hidden = 0x04,   // Symbol is hidden, aka not exported.
-    SF_Weak = 0x08,     // Symbol is weak.
+    SF_LD = 0x01,     // LD attributes are set.
+                      // Leave place for EX attributes.
+    SF_Hidden = 0x04, // Symbol is hidden, aka not exported.
+    SF_Weak = 0x08,   // Symbol is weak.
   };
 
 public:
