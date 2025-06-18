@@ -2,11 +2,11 @@
 ; RUN: llc < %s -mtriple=i686-unknown-unknown   -mattr=+mmx          | FileCheck %s --check-prefixes=X86,X86-MMX
 ; RUN: llc < %s -mtriple=i686-unknown-unknown   -mattr=+mmx,+sse2    | FileCheck %s --check-prefixes=X86,X86-SSE
 ; RUN: llc < %s -mtriple=i686-unknown-unknown   -mattr=+mmx,+ssse3   | FileCheck %s --check-prefixes=X86,X86-SSE
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse2    | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+ssse3   | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx     | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx2    | FileCheck %s --check-prefix=X64
-; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512f | FileCheck %s --check-prefix=X64
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+sse2    | FileCheck %s --check-prefixes=X64,X64-SSE2
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+ssse3   | FileCheck %s --check-prefixes=X64,X64-SSSE3
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx     | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx2    | FileCheck %s --check-prefixes=X64,X64-AVX
+; RUN: llc < %s -mtriple=x86_64-unknown-unknown -mattr=+mmx,+avx512f | FileCheck %s --check-prefixes=X64,X64-AVX
 
 declare <1 x i64> @llvm.x86.mmx.padd.d(<1 x i64>, <1 x i64>)
 
@@ -536,6 +536,71 @@ define void @build_v8i8_0123zzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
+;
+; X64-SSE2-LABEL: build_v8i8_0123zzzu:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movd %esi, %xmm0
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [0,255,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; X64-SSE2-NEXT:    pand %xmm1, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm0, %xmm1
+; X64-SSE2-NEXT:    por %xmm2, %xmm1
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,0,255,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; X64-SSE2-NEXT:    pand %xmm0, %xmm1
+; X64-SSE2-NEXT:    movd %edx, %xmm2
+; X64-SSE2-NEXT:    psllw $8, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm2, %xmm0
+; X64-SSE2-NEXT:    por %xmm1, %xmm0
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm1 = [255,255,0,255,255,255,255,255,255,255,255,255,255,255,255,255]
+; X64-SSE2-NEXT:    pand %xmm1, %xmm0
+; X64-SSE2-NEXT:    movd %ecx, %xmm2
+; X64-SSE2-NEXT:    pslld $16, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm2, %xmm1
+; X64-SSE2-NEXT:    por %xmm0, %xmm1
+; X64-SSE2-NEXT:    movdqa {{.*#+}} xmm0 = [255,255,255,0,255,255,255,255,255,255,255,255,255,255,255,255]
+; X64-SSE2-NEXT:    pand %xmm0, %xmm1
+; X64-SSE2-NEXT:    movd %r8d, %xmm2
+; X64-SSE2-NEXT:    pslld $24, %xmm2
+; X64-SSE2-NEXT:    pandn %xmm2, %xmm0
+; X64-SSE2-NEXT:    por %xmm1, %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-SSE2-NEXT:    movdq2q %xmm0, %mm0
+; X64-SSE2-NEXT:    paddd %mm0, %mm0
+; X64-SSE2-NEXT:    movq %mm0, (%rdi)
+; X64-SSE2-NEXT:    retq
+;
+; X64-SSSE3-LABEL: build_v8i8_0123zzzu:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movd %esi, %xmm0
+; X64-SSSE3-NEXT:    movss {{.*#+}} xmm0 = xmm0[0,1,2,3]
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0],zero,xmm0[u,u,u,u,u,7,u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    movd %edx, %xmm1
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,xmm1[0,u,u,u,u,u],zero,xmm1[u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    por %xmm0, %xmm1
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = xmm1[0,1],zero,xmm1[u,u,u,u,7,u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    movd %ecx, %xmm0
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = zero,zero,xmm0[0,u,u,u,u],zero,xmm0[u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    por %xmm1, %xmm0
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[0,1,2],zero,xmm0[u,u,u,7,u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    movd %r8d, %xmm1
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm1 = zero,zero,zero,xmm1[0,u,u,u],zero,xmm1[u,u,u,u,u,u,u,u]
+; X64-SSSE3-NEXT:    por %xmm0, %xmm1
+; X64-SSSE3-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSSE3-NEXT:    movdq2q %xmm1, %mm0
+; X64-SSSE3-NEXT:    paddd %mm0, %mm0
+; X64-SSSE3-NEXT:    movq %mm0, (%rdi)
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: build_v8i8_0123zzzu:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpinsrb $0, %esi, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpinsrb $1, %edx, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpinsrb $2, %ecx, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpinsrb $3, %r8d, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    movdq2q %xmm0, %mm0
+; X64-AVX-NEXT:    paddd %mm0, %mm0
+; X64-AVX-NEXT:    movq %mm0, (%rdi)
+; X64-AVX-NEXT:    retq
   %1  = insertelement <8 x i8> undef, i8   %a0, i32 0
   %2  = insertelement <8 x i8>    %1, i8   %a1, i32 1
   %3  = insertelement <8 x i8>    %2, i8   %a2, i32 2
@@ -608,6 +673,36 @@ define void @build_v8i8_0zzzzzzu(ptr%p0, i8 %a0, i8 %a1, i8 %a2, i8 %a3, i8 %a4,
 ; X86-SSE-NEXT:    paddd %mm0, %mm0
 ; X86-SSE-NEXT:    movq %mm0, (%eax)
 ; X86-SSE-NEXT:    retl
+;
+; X64-SSE2-LABEL: build_v8i8_0zzzzzzu:
+; X64-SSE2:       # %bb.0:
+; X64-SSE2-NEXT:    movd %esi, %xmm0
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    por %xmm0, %xmm1
+; X64-SSE2-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; X64-SSE2-NEXT:    movdq2q %xmm1, %mm0
+; X64-SSE2-NEXT:    paddd %mm0, %mm0
+; X64-SSE2-NEXT:    movq %mm0, (%rdi)
+; X64-SSE2-NEXT:    retq
+;
+; X64-SSSE3-LABEL: build_v8i8_0zzzzzzu:
+; X64-SSSE3:       # %bb.0:
+; X64-SSSE3-NEXT:    movd %esi, %xmm0
+; X64-SSSE3-NEXT:    palignr {{.*#+}} xmm0 = xmm0[1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,0]
+; X64-SSSE3-NEXT:    pshufb {{.*#+}} xmm0 = xmm0[15],zero,zero,zero,zero,zero,zero,xmm0[6],zero,zero,zero,zero,zero,zero,zero,zero
+; X64-SSSE3-NEXT:    movdq2q %xmm0, %mm0
+; X64-SSSE3-NEXT:    paddd %mm0, %mm0
+; X64-SSSE3-NEXT:    movq %mm0, (%rdi)
+; X64-SSSE3-NEXT:    retq
+;
+; X64-AVX-LABEL: build_v8i8_0zzzzzzu:
+; X64-AVX:       # %bb.0:
+; X64-AVX-NEXT:    vpinsrb $0, %esi, %xmm0, %xmm0
+; X64-AVX-NEXT:    vpand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; X64-AVX-NEXT:    movdq2q %xmm0, %mm0
+; X64-AVX-NEXT:    paddd %mm0, %mm0
+; X64-AVX-NEXT:    movq %mm0, (%rdi)
+; X64-AVX-NEXT:    retq
   %1  = insertelement <8 x i8> undef, i8   %a0, i32 0
   %2  = insertelement <8 x i8>    %1, i8     0, i32 1
   %3  = insertelement <8 x i8>    %2, i8     0, i32 2
