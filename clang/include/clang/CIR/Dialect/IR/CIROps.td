@@ -2155,6 +2155,8 @@ def VecCmpOp : CIR_Op<"vec.cmp", [Pure, SameTypeOperands]> {
     `(` $kind `,` $lhs `,` $rhs `)` `:` qualified(type($lhs)) `,`
     qualified(type($result)) attr-dict
   }];
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2350,6 +2352,60 @@ def BaseClassAddrOp : CIR_Op<"base_class_addr"> {
       $derived_addr `:` qualified(type($derived_addr))
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($base_addr)) attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// ComplexCreateOp
+//===----------------------------------------------------------------------===//
+
+def ComplexCreateOp : CIR_Op<"complex.create", [Pure, SameTypeOperands]> {
+  let summary = "Create a complex value from its real and imaginary parts";
+  let description = [{
+    The `cir.complex.create` operation takes two operands that represent the
+    real and imaginary part of a complex number, and yields the complex number.
+
+    ```mlir
+    %0 = cir.const #cir.fp<1.000000e+00> : !cir.double
+    %1 = cir.const #cir.fp<2.000000e+00> : !cir.double
+    %2 = cir.complex.create %0, %1 : !cir.double -> !cir.complex<!cir.double>
+    ```
+  }];
+
+  let results = (outs CIR_ComplexType:$result);
+  let arguments = (ins
+    CIR_AnyIntOrFloatType:$real,
+    CIR_AnyIntOrFloatType:$imag
+  );
+
+  let assemblyFormat = [{
+    $real `,` $imag
+    `:` qualified(type($real)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasFolder = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// Assume Operations
+//===----------------------------------------------------------------------===//
+
+def AssumeOp : CIR_Op<"assume"> {
+  let summary = "Tell the optimizer that a boolean value is true";
+  let description = [{
+    The `cir.assume` operation takes a single boolean prediate as its only
+    argument and does not have any results. The operation tells the optimizer
+    that the predicate is always true.
+
+    This operation corresponds to the `__assume` and the `__builtin_assume`
+    builtin functions.
+  }];
+
+  let arguments = (ins CIR_BoolType:$predicate);
+
+  let assemblyFormat = [{
+    $predicate `:` type($predicate) attr-dict
   }];
 }
 
