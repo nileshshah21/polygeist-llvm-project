@@ -1199,7 +1199,7 @@ __isl_give char *isl_multi_pw_aff_to_str(__isl_keep isl_multi_pw_aff *mpa);
 __isl_give isl_printer *isl_printer_print_multi_pw_aff(
 	__isl_take isl_printer *p, __isl_keep isl_multi_pw_aff *mpa);
 void isl_multi_pw_aff_dump(__isl_keep isl_multi_pw_aff *mpa);
-
+__isl_give isl_pw_aff *isl_pw_aff_from_map_dim(__isl_keep isl_map *map, int pos);
 __isl_give isl_union_pw_aff *isl_union_pw_aff_copy(
 	__isl_keep isl_union_pw_aff *upa);
 __isl_null isl_union_pw_aff *isl_union_pw_aff_free(

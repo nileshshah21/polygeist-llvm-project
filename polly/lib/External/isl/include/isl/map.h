@@ -612,6 +612,7 @@ __isl_export
 isl_bool isl_map_is_disjoint(__isl_keep isl_map *map1,
 	__isl_keep isl_map *map2);
 isl_bool isl_basic_map_is_single_valued(__isl_keep isl_basic_map *bmap);
+isl_bool isl_map_dim_is_single_valued(__isl_keep isl_map *map, int pos);
 isl_bool isl_map_plain_is_single_valued(__isl_keep isl_map *map);
 __isl_export
 isl_bool isl_map_is_single_valued(__isl_keep isl_map *map);
@@ -785,6 +786,7 @@ __isl_give isl_map *isl_map_from_aff(__isl_take isl_aff *aff);
 __isl_export
 __isl_give isl_map *isl_multi_aff_as_map(__isl_take isl_multi_aff *ma);
 __isl_give isl_map *isl_map_from_multi_aff(__isl_take isl_multi_aff *maff);
+__isl_give isl_basic_map *isl_basic_map_range_factor_domain(__isl_take isl_basic_map *bmap);
 
 __isl_give isl_pw_aff *isl_map_dim_min(__isl_take isl_map *map, int pos);
 __isl_give isl_pw_aff *isl_map_dim_max(__isl_take isl_map *map, int pos);
