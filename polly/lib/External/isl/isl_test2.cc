@@ -158,7 +158,7 @@ static void test(isl::ctx ctx, R (T::*fn)(A1) const, const std::string &name,
 		ss << name << "(" << test.arg1 << ", " << test.arg2 << ") =\n"
 		   << res << "\n"
 		   << "expecting:\n"
-		   << test.res;
+		   << expected;
 		THROW_INVALID(ss.str().c_str());
 	}
 }
@@ -217,12 +217,32 @@ static void test_space(isl::ctx ctx)
 }
 
 /* Perform some basic conversion tests.
+ *
+ * In particular, check that a map with an output dimension
+ * that is equal to some integer division over a domain involving
+ * a local variable without a known integer division expression or
+ * to some linear combination of integer divisions
+ * can be converted to a function expressed in the same way.
  */
 static void test_conversion(isl::ctx ctx)
 {
+	C(&isl::set::as_pw_multi_aff, {
+	{ "[N=0:] -> { [] }",
+	  "[N=0:] -> { [] }" },
+	});
+
 	C(&isl::multi_pw_aff::as_set, {
 	{ "[n] -> { [] : n >= 0 } ",
 	  "[n] -> { [] : n >= 0 } " },
+	});
+
+	C(&isl::map::as_pw_multi_aff, {
+	{ "{ [a] -> [a//2] : "
+	    "exists (e0: 8*floor((-a + e0)/8) <= -8 - a + 8e0) }",
+	  "{ [a] -> [a//2] : "
+	    "exists (e0: 8*floor((-a + e0)/8) <= -8 - a + 8e0) }" },
+	{ "{ [a, b] -> [(2*floor((a)/8) + floor((b)/6))] }",
+	  "{ [a, b] -> [(2*floor((a)/8) + floor((b)/6))] }" },
 	});
 }
 
@@ -254,6 +274,12 @@ static void test_preimage(isl::ctx ctx)
 	  "{ A[a] : 0 <= a <= 100 and exists b : a = 3 b }" },
 	{ "{ B[i,j] : j = [(i)/2] } ", "{ A[i,j] -> B[i/3,j] }",
 	  "{ A[i,j] : j = [(i)/6] and exists a : i = 3 a }" },
+	});
+
+	C(arg<isl::pw_multi_aff>(&isl::set::preimage), {
+	{ "{ B[i,j] : 0 <= i < 10 and 0 <= j < 100 }",
+	  "{ A[j,i] -> B[i,j] : false }",
+	  "{ A[j,i] : false }" },
 	});
 
 	C(arg<isl::multi_aff>(&isl::union_map::preimage_domain), {
@@ -320,6 +346,9 @@ static void test_intersect(isl::ctx ctx)
 	{ "{ C[z] -> [A[x] -> B[y]]; E[z] -> [D[x] -> A[y]] }",
 	  "{ A[0] }",
 	  "{ }" },
+	{ "{ T[A[x] -> B[y]] -> C[z]; [D[x] -> A[y]] -> E[z] }",
+	  "{ A[0] }",
+	  "{ T[A[0] -> B[y]] -> C[z] }" },
 	});
 
 	C(&isl::union_map::intersect_range_wrapped_domain, {
@@ -329,6 +358,9 @@ static void test_intersect(isl::ctx ctx)
 	{ "{ C[z] -> [A[x] -> B[y]]; E[z] -> [D[x] -> A[y]] }",
 	  "{ A[0] }",
 	  "{ C[z] -> [A[0] -> B[y]] }" },
+	{ "{ C[z] -> T[A[x] -> B[y]]; E[z] -> [D[x] -> A[y]] }",
+	  "{ A[0] }",
+	  "{ C[z] -> T[A[0] -> B[y]] }" },
 	});
 }
 
@@ -336,10 +368,109 @@ static void test_intersect(isl::ctx ctx)
  */
 static void test_gist(isl::ctx ctx)
 {
+	C(arg<isl::set>(&isl::pw_aff::gist), {
+	{ "{ [x] -> [x] : x != 0 }", "{ [x] : x < -1 or x > 1 }",
+	  "{ [x] -> [x] }" },
+	});
+
 	C(&isl::pw_aff::gist_params, {
 	{ "[N] -> { D[x] -> [x] : N >= 0; D[x] -> [0] : N < 0 }",
 	  "[N] -> { : N >= 0 }",
 	  "[N] -> { D[x] -> [x] }" },
+	});
+
+	C(arg<isl::set>(&isl::multi_aff::gist), {
+	{ "{ A[i] -> B[i, i] }", "{ A[0] }",
+	  "{ A[i] -> B[0, 0] }" },
+	{ "[N] -> { A[i] -> B[i, N] }", "[N] -> { A[0] : N = 5 }",
+	  "[N] -> { A[i] -> B[0, 5] }" },
+	{ "[N] -> { B[N + 1, N] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[6, 5] }" },
+	{ "[N] -> { A[i] -> B[] }", "[N] -> { A[0] : N = 5 }",
+	  "[N] -> { A[i] -> B[] }" },
+	{ "[N] -> { B[] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[] }" },
+	});
+
+	C(&isl::multi_aff::gist_params, {
+	{ "[N] -> { A[i] -> B[i, N] }", "[N] -> { : N = 5 }",
+	  "[N] -> { A[i] -> B[i, 5] }" },
+	{ "[N] -> { B[N + 1, N] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[6, 5] }" },
+	{ "[N] -> { A[i] -> B[] }", "[N] -> { : N = 5 }",
+	  "[N] -> { A[i] -> B[] }" },
+	{ "[N] -> { B[] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[] }" },
+	});
+
+	C(arg<isl::set>(&isl::multi_pw_aff::gist), {
+	{ "{ A[i] -> B[i, i] : i >= 0 }", "{ A[0] }",
+	  "{ A[i] -> B[0, 0] }" },
+	{ "[N] -> { A[i] -> B[i, N] : N >= 0 }", "[N] -> { A[0] : N = 5 }",
+	  "[N] -> { A[i] -> B[0, 5] }" },
+	{ "[N] -> { B[N + 1, N] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[6, 5] }" },
+	{ "[N] -> { A[i] -> B[] }", "[N] -> { A[0] : N = 5 }",
+	  "[N] -> { A[i] -> B[] }" },
+	{ "[N] -> { B[] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[] }" },
+	{ "{ A[i=0:10] -> B[i] }", "{ A[5] }",
+	  "{ A[i] -> B[5] }" },
+	{ "{ A[0:10] -> B[] }", "{ A[0:10] }",
+	  "{ A[i] -> B[] }" },
+	{ "[N] -> { A[i] -> B[] : N >= 0 }", "[N] -> { A[0] : N = 5 }",
+	  "[N] -> { A[i] -> B[] }" },
+	{ "[N] -> { B[] : N >= 0 }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[] }" },
+	{ "[N] -> { B[] : N = 5 }", "[N] -> { : N >= 0 }",
+	  "[N] -> { B[] : N = 5 }" },
+	});
+
+	C(&isl::multi_pw_aff::gist_params, {
+	{ "[N] -> { A[i] -> B[i, N] : N >= 0 }", "[N] -> { : N = 5 }",
+	  "[N] -> { A[i] -> B[i, 5] }" },
+	{ "[N] -> { B[N + 1, N] }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[6, 5] }" },
+	{ "[N] -> { A[i] -> B[] : N >= 0 }", "[N] -> { : N = 5 }",
+	  "[N] -> { A[i] -> B[] }" },
+	{ "[N] -> { B[] : N >= 0 }", "[N] -> { : N = 5 }",
+	  "[N] -> { B[] }" },
+	{ "[N] -> { B[] : N >= 5 }", "[N] -> { : N >= 0 }",
+	  "[N] -> { B[] : N >= 5 }" },
+	});
+
+	C(&isl::multi_union_pw_aff::gist, {
+	{ "C[{ B[i,i] -> [3i] }]", "{ B[i,i] }",
+	  "C[{ B[i,j] -> [3i] }]" },
+	{ "(C[] : { B[i,i] })", "{ B[i,i] }",
+	  "(C[] : { B[i,j] })" },
+	{ "[N] -> (C[] : { B[N,N] })", "[N] -> { B[N,N] }",
+	  "[N] -> (C[] : { B[i,j] })" },
+	{ "C[]", "{ B[i,i] }",
+	  "C[]" },
+	{ "[N] -> (C[] : { B[i,i] : N >= 0 })", "{ B[i,i] }",
+	  "[N] -> (C[] : { B[i,j] : N >= 0 })" },
+	{ "[N] -> (C[] : { : N >= 0 })", "{ B[i,i] }",
+	  "[N] -> (C[] : { : N >= 0 })" },
+	{ "[N] -> (C[] : { : N >= 0 })", "[N] -> { B[i,i] : N >= 0 }",
+	  "[N] -> C[]" },
+	});
+
+	C(&isl::multi_union_pw_aff::gist_params, {
+	{ "[N] -> C[{ B[i,i] -> [3i + N] }]", "[N] -> { : N = 1 }",
+	  "[N] -> C[{ B[i,i] -> [3i + 1] }]" },
+	{ "C[{ B[i,i] -> [3i] }]", "[N] -> { : N >= 0 }",
+	  "[N] -> C[{ B[i,i] -> [3i] }]" },
+	{ "[N] -> C[{ B[i,i] -> [3i] : N >= 0 }]", "[N] -> { : N >= 0 }",
+	  "[N] -> C[{ B[i,i] -> [3i] }]" },
+	{ "[N] -> C[{ B[i,i] -> [3i] : N >= 1 }]", "[N] -> { : N >= 0 }",
+	  "[N] -> C[{ B[i,i] -> [3i] : N >= 1 }]" },
+	{ "[N] -> (C[] : { B[i,i] : N >= 0 })", "[N] -> { : N >= 0 }",
+	  "[N] -> (C[] : { B[i,i] })" },
+	{ "[N] -> (C[] : { : N >= 0 })", "[N] -> { : N >= 0 }",
+	  "[N] -> C[]" },
+	{ "C[{ B[i,i] -> [3i] }]", "[N] -> { : N >= 0 }",
+	  "[N] -> C[{ B[i,i] -> [3i] }]" },
 	});
 }
 
@@ -357,6 +488,86 @@ static void test_project(isl::ctx ctx)
 	C(arg<isl::id_list>(&isl::union_map::project_out_param), {
 	{ "[M, N, O] -> { D[i] -> A[j] : i <= j < M, N, O }", "(M, N)",
 	  "[O] -> { D[i] -> A[j] : i <= j < O }" },
+	});
+}
+
+/* Perform some basic reverse tests.
+ */
+static void test_reverse(isl::ctx ctx)
+{
+	C(&isl::aff::domain_reverse, {
+	{ "{ T[A[] -> B[*]] -> [0] }",
+	  "{ [B[*] -> A[]] -> [0] }" },
+	{ "{ T[A[] -> A[]] -> [0] }",
+	  "{ T[A[] -> A[]] -> [0] }" },
+	{ "{ [A[x] -> B[y]] -> [5*(x // 2) + 7*(y // 3)] }",
+	  "{ [B[y] -> A[x]] -> [5*(x // 2) + 7*(y // 3)] }" },
+	});
+
+	C(&isl::multi_aff::domain_reverse, {
+	{ "{ [A[x] -> B[y]] -> [5*(x // 2) + 7*(y // 3)] }",
+	  "{ [B[y] -> A[x]] -> [5*(x // 2) + 7*(y // 3)] }" },
+	{ "{ [A[x] -> B[y]] -> T[5*(x // 2) + 7*(y // 3), 0] }",
+	  "{ [B[y] -> A[x]] -> T[5*(x // 2) + 7*(y // 3), 0] }" },
+	});
+
+	C(&isl::set::wrapped_reverse, {
+	{ "{ T[A[] -> B[*]] }",
+	  "{ [B[*] -> A[]] }" },
+	{ "{ T[A[] -> A[]] }",
+	  "{ T[A[] -> A[]] }" },
+	{ "{ [A[x] -> B[2x]] }",
+	  "{ [B[y] -> A[x]] : y = 2x }" },
+	});
+
+	C(&isl::pw_aff::domain_reverse, {
+	{ "{ [A[x] -> B[y]] -> [5*(x // 2) + 7*(y // 3)] }",
+	  "{ [B[y] -> A[x]] -> [5*(x // 2) + 7*(y // 3)] }" },
+	{ "{ [A[x] -> B[y]] -> [5*(x // 2) + 7*(y // 3)] : x > y }",
+	  "{ [B[y] -> A[x]] -> [5*(x // 2) + 7*(y // 3)] : x > y }" },
+	{ "{ [A[i] -> B[i + 1]] -> [i + 2] }",
+	  "{ [B[i] -> A[i - 1]] -> [i + 1] }" },
+	});
+
+	C(&isl::pw_multi_aff::domain_reverse, {
+	{ "{ [A[x] -> B[y]] -> T[5*(x // 2) + 7*(y // 3), 0] : x > y }",
+	  "{ [B[y] -> A[x]] -> T[5*(x // 2) + 7*(y // 3), 0] : x > y }" },
+	{ "{ [A[i] -> B[i + 1]] -> T[0, i + 2] }",
+	  "{ [B[i] -> A[i - 1]] -> T[0, i + 1] }" },
+	});
+
+	C(&isl::multi_pw_aff::domain_reverse, {
+	{ "{ [A[x] -> B[y]] -> T[5*(x // 2) + 7*(y // 3) : x > y, 0] }",
+	  "{ [B[y] -> A[x]] -> T[5*(x // 2) + 7*(y // 3) : x > y, 0] }" },
+	});
+
+	C(&isl::map::domain_reverse, {
+	{ "{ [A[] -> B[]] -> [C[] -> D[]] }",
+	  "{ [B[] -> A[]] -> [C[] -> D[]] }" },
+	{ "{ N[B[] -> C[]] -> A[] }",
+	  "{ [C[] -> B[]] -> A[] }" },
+	{ "{ N[B[x] -> B[y]] -> A[] }",
+	  "{ N[B[*] -> B[*]] -> A[] }" },
+	});
+
+	C(&isl::union_map::domain_reverse, {
+	{ "{ [A[] -> B[]] -> [C[] -> D[]] }",
+	  "{ [B[] -> A[]] -> [C[] -> D[]] }" },
+	{ "{ A[] -> [B[] -> C[]]; A[] -> B[]; A[0] -> N[B[1] -> B[2]] }",
+	  "{ }" },
+	{ "{ N[B[] -> C[]] -> A[] }",
+	  "{ [C[] -> B[]] -> A[] }" },
+	{ "{ N[B[x] -> B[y]] -> A[] }",
+	  "{ N[B[*] -> B[*]] -> A[] }" },
+	});
+
+	C(&isl::union_map::range_reverse, {
+	{ "{ A[] -> [B[] -> C[]]; A[] -> B[]; A[0] -> N[B[1] -> B[2]] }",
+	  "{ A[] -> [C[] -> B[]]; A[0] -> N[B[2] -> B[1]] }" },
+	{ "{ A[] -> N[B[] -> C[]] }",
+	  "{ A[] -> [C[] -> B[]] }" },
+	{ "{ A[] -> N[B[x] -> B[y]] }",
+	  "{ A[] -> N[B[*] -> B[*]] }" },
 	});
 }
 
@@ -412,6 +623,7 @@ static std::vector<std::pair<const char *, void (*)(isl::ctx)>> tests =
 	{ "intersect", &test_intersect },
 	{ "gist", &test_gist },
 	{ "project out parameters", &test_project },
+	{ "reverse", &test_reverse },
 	{ "scale", &test_scale },
 	{ "id-to-id", &test_id_to_id },
 };
