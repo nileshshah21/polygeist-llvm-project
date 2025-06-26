@@ -14471,19 +14471,6 @@ __isl_give isl_basic_set *isl_basic_set_transform_dims(
 	return isl_basic_map_transform_dims(bset, type, first, trans);
 }
 
-/* Replace the variables x of type "type" starting at "first" in "bset"
- * by x' with x = M x' with M the matrix trans.
- * That is, replace the corresponding coefficients c by c M.
- *
- * The transformation matrix should be a square matrix.
- */
-__isl_give isl_basic_set *isl_basic_set_transform_dims(
-	__isl_take isl_basic_set *bset, enum isl_dim_type type, unsigned first,
-	__isl_take isl_mat *trans)
-{
-	return isl_basic_map_transform_dims(bset, type, first, trans);
-}
-
 /* Check if 'map' is single-valued along a particular dimension */
 isl_bool isl_map_dim_is_single_valued(__isl_keep isl_map *map, int pos)
 {
