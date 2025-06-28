@@ -326,6 +326,8 @@ __isl_give isl_map *isl_map_copy(__isl_keep isl_map *map);
 __isl_export
 __isl_give isl_map *isl_map_reverse(__isl_take isl_map *map);
 __isl_export
+__isl_give isl_map *isl_map_domain_reverse(__isl_take isl_map *map);
+__isl_export
 __isl_give isl_map *isl_map_range_reverse(__isl_take isl_map *map);
 __isl_export
 __isl_give isl_map *isl_map_union(
@@ -564,6 +566,7 @@ __isl_give isl_basic_set *isl_basic_set_flatten(__isl_take isl_basic_set *bset);
 __isl_export
 __isl_give isl_set *isl_set_flatten(__isl_take isl_set *set);
 __isl_give isl_map *isl_set_flatten_map(__isl_take isl_set *set);
+__isl_export
 __isl_give isl_set *isl_map_params(__isl_take isl_map *map);
 __isl_export
 __isl_give isl_set *isl_map_domain(__isl_take isl_map *bmap);
@@ -615,6 +618,7 @@ isl_bool isl_basic_map_is_single_valued(__isl_keep isl_basic_map *bmap);
 isl_bool isl_map_plain_is_single_valued(__isl_keep isl_map *map);
 __isl_export
 isl_bool isl_map_is_single_valued(__isl_keep isl_map *map);
+isl_bool isl_map_dim_is_single_valued(__isl_keep isl_map *map, int pos);
 isl_bool isl_map_plain_is_injective(__isl_keep isl_map *map);
 __isl_export
 isl_bool isl_map_is_injective(__isl_keep isl_map *map);
@@ -759,6 +763,7 @@ __isl_give isl_map *isl_map_align_params(__isl_take isl_map *map,
 	__isl_take isl_space *model);
 __isl_give isl_basic_map *isl_basic_map_drop_unused_params(
 	__isl_take isl_basic_map *bmap);
+__isl_export
 __isl_give isl_map *isl_map_drop_unused_params(__isl_take isl_map *map);
 
 __isl_give isl_mat *isl_basic_map_equalities_matrix(
@@ -780,6 +785,7 @@ __isl_give isl_basic_map *isl_basic_map_from_multi_aff(
 	__isl_take isl_multi_aff *maff);
 __isl_give isl_basic_map *isl_basic_map_from_aff_list(
 	__isl_take isl_space *domain_space, __isl_take isl_aff_list *list);
+__isl_give isl_basic_map *isl_basic_map_range_factor_domain(__isl_take isl_basic_map *bmap);
 
 __isl_give isl_map *isl_map_from_aff(__isl_take isl_aff *aff);
 __isl_export

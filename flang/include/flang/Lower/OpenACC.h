@@ -19,9 +19,12 @@ namespace llvm {
 template <typename T, unsigned N>
 class SmallVector;
 class StringRef;
-}
+} // namespace llvm
 
 namespace mlir {
+namespace func {
+class FuncOp;
+} // namespace func
 class Location;
 class Type;
 class ModuleOp;
@@ -31,18 +34,25 @@ class Value;
 
 namespace fir {
 class FirOpBuilder;
-}
+} // namespace fir
 
 namespace Fortran {
+namespace evaluate {
+struct ProcedureDesignator;
+} // namespace evaluate
+
 namespace parser {
+struct AccClauseList;
 struct OpenACCConstruct;
 struct OpenACCDeclarativeConstruct;
+struct OpenACCRoutineConstruct;
 } // namespace parser
 
 namespace semantics {
+class OpenACCRoutineInfo;
 class SemanticsContext;
 class Symbol;
-}
+} // namespace semantics
 
 namespace lower {
 
@@ -53,9 +63,6 @@ namespace pft {
 struct Evaluation;
 } // namespace pft
 
-using AccRoutineInfoMappingList =
-    llvm::SmallVector<std::pair<std::string, mlir::SymbolRefAttr>>;
-
 static constexpr llvm::StringRef declarePostAllocSuffix =
     "_acc_declare_update_desc_post_alloc";
 static constexpr llvm::StringRef declarePreDeallocSuffix =
@@ -63,21 +70,22 @@ static constexpr llvm::StringRef declarePreDeallocSuffix =
 static constexpr llvm::StringRef declarePostDeallocSuffix =
     "_acc_declare_update_desc_post_dealloc";
 
-void genOpenACCConstruct(AbstractConverter &,
-                         Fortran::semantics::SemanticsContext &,
-                         pft::Evaluation &, const parser::OpenACCConstruct &);
-void genOpenACCDeclarativeConstruct(AbstractConverter &,
-                                    Fortran::semantics::SemanticsContext &,
-                                    StatementContext &,
-                                    const parser::OpenACCDeclarativeConstruct &,
-                                    AccRoutineInfoMappingList &);
+static constexpr llvm::StringRef privatizationRecipePrefix = "privatization";
 
-void finalizeOpenACCRoutineAttachment(mlir::ModuleOp &,
-                                      AccRoutineInfoMappingList &);
+mlir::Value genOpenACCConstruct(AbstractConverter &,
+                                Fortran::semantics::SemanticsContext &,
+                                pft::Evaluation &,
+                                const parser::OpenACCConstruct &);
+void genOpenACCDeclarativeConstruct(
+    AbstractConverter &, Fortran::semantics::SemanticsContext &,
+    StatementContext &, const parser::OpenACCDeclarativeConstruct &);
+void genOpenACCRoutineConstruct(
+    AbstractConverter &, mlir::ModuleOp, mlir::func::FuncOp,
+    const std::vector<Fortran::semantics::OpenACCRoutineInfo> &);
 
 /// Get a acc.private.recipe op for the given type or create it if it does not
 /// exist yet.
-mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(mlir::OpBuilder &,
+mlir::acc::PrivateRecipeOp createOrGetPrivateRecipe(fir::FirOpBuilder &,
                                                     llvm::StringRef,
                                                     mlir::Location, mlir::Type);
 
@@ -90,10 +98,10 @@ createOrGetReductionRecipe(fir::FirOpBuilder &, llvm::StringRef, mlir::Location,
 
 /// Get a acc.firstprivate.recipe op for the given type or create it if it does
 /// not exist yet.
-mlir::acc::FirstprivateRecipeOp createOrGetFirstprivateRecipe(mlir::OpBuilder &,
-                                                              llvm::StringRef,
-                                                              mlir::Location,
-                                                              mlir::Type);
+mlir::acc::FirstprivateRecipeOp
+createOrGetFirstprivateRecipe(fir::FirOpBuilder &, llvm::StringRef,
+                              mlir::Location, mlir::Type,
+                              llvm::SmallVector<mlir::Value> &);
 
 void attachDeclarePostAllocAction(AbstractConverter &, fir::FirOpBuilder &,
                                   const Fortran::semantics::Symbol &);
@@ -105,6 +113,14 @@ void attachDeclarePostDeallocAction(AbstractConverter &, fir::FirOpBuilder &,
 
 void genOpenACCTerminator(fir::FirOpBuilder &, mlir::Operation *,
                           mlir::Location);
+
+int64_t getCollapseValue(const Fortran::parser::AccClauseList &);
+
+bool isInOpenACCLoop(fir::FirOpBuilder &);
+
+void setInsertionPointAfterOpenACCLoopIfInside(fir::FirOpBuilder &);
+
+void genEarlyReturnInOpenACCLoop(fir::FirOpBuilder &, mlir::Location);
 
 } // namespace lower
 } // namespace Fortran

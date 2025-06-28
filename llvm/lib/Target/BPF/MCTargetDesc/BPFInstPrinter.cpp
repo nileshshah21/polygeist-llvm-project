@@ -10,17 +10,14 @@
 //
 //===----------------------------------------------------------------------===//
 
-
-#include "BPF.h"
 #include "MCTargetDesc/BPFInstPrinter.h"
+#include "BPF.h"
 #include "llvm/MC/MCAsmInfo.h"
 #include "llvm/MC/MCExpr.h"
 #include "llvm/MC/MCInst.h"
-#include "llvm/MC/MCRegister.h"
 #include "llvm/MC/MCSymbol.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/FormattedStream.h"
 using namespace llvm;
 
 #define DEBUG_TYPE "asm-printer"
@@ -36,15 +33,16 @@ void BPFInstPrinter::printInst(const MCInst *MI, uint64_t Address,
 }
 
 static void printExpr(const MCExpr *Expr, raw_ostream &O) {
-#ifndef NDEBUG
   const MCSymbolRefExpr *SRE;
 
   if (const MCBinaryExpr *BE = dyn_cast<MCBinaryExpr>(Expr))
     SRE = dyn_cast<MCSymbolRefExpr>(BE->getLHS());
   else
     SRE = dyn_cast<MCSymbolRefExpr>(Expr);
-  assert(SRE && "Unexpected MCExpr type.");
+  if (!SRE)
+    report_fatal_error("Unexpected MCExpr type.");
 
+#ifndef NDEBUG
   MCSymbolRefExpr::VariantKind Kind = SRE->getKind();
 
   assert(Kind == MCSymbolRefExpr::VK_None);
@@ -53,8 +51,7 @@ static void printExpr(const MCExpr *Expr, raw_ostream &O) {
 }
 
 void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
-                                  raw_ostream &O, const char *Modifier) {
-  assert((Modifier == nullptr || Modifier[0] == 0) && "No modifiers supported");
+                                  raw_ostream &O) {
   const MCOperand &Op = MI->getOperand(OpNo);
   if (Op.isReg()) {
     O << getRegisterName(Op.getReg());
@@ -66,8 +63,8 @@ void BPFInstPrinter::printOperand(const MCInst *MI, unsigned OpNo,
   }
 }
 
-void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo, raw_ostream &O,
-                                     const char *Modifier) {
+void BPFInstPrinter::printMemOperand(const MCInst *MI, int OpNo,
+                                     raw_ostream &O) {
   const MCOperand &RegOp = MI->getOperand(OpNo);
   const MCOperand &OffsetOp = MI->getOperand(OpNo + 1);
 

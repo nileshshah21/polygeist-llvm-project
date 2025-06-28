@@ -15,9 +15,9 @@
 #include <stdint.h>
 #include <string.h>
 
-#include "cet_unwind.h"
 #include "config.h"
 #include "libunwind.h"
+#include "shadow_stack_unwind.h"
 
 namespace libunwind {
 
@@ -48,7 +48,7 @@ class _LIBUNWIND_HIDDEN Registers_x86;
 extern "C" void __libunwind_Registers_x86_jumpto(Registers_x86 *);
 
 #if defined(_LIBUNWIND_USE_CET)
-extern "C" void *__libunwind_cet_get_jump_target() {
+extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_x86_jumpto);
 }
 #endif
@@ -268,7 +268,7 @@ class _LIBUNWIND_HIDDEN Registers_x86_64;
 extern "C" void __libunwind_Registers_x86_64_jumpto(Registers_x86_64 *);
 
 #if defined(_LIBUNWIND_USE_CET)
-extern "C" void *__libunwind_cet_get_jump_target() {
+extern "C" void *__libunwind_shstk_get_jump_target() {
   return reinterpret_cast<void *>(&__libunwind_Registers_x86_64_jumpto);
 }
 #endif
@@ -619,6 +619,8 @@ public:
   void      setIP(uint32_t value) { _registers.__srr0 = value; }
   uint64_t  getCR() const         { return _registers.__cr; }
   void      setCR(uint32_t value) { _registers.__cr = value; }
+  uint64_t  getLR() const         { return _registers.__lr; }
+  void      setLR(uint32_t value) { _registers.__lr = value; }
 
 private:
   struct ppc_thread_state_t {
@@ -1189,6 +1191,8 @@ public:
   void      setIP(uint64_t value) { _registers.__srr0 = value; }
   uint64_t  getCR() const         { return _registers.__cr; }
   void      setCR(uint64_t value) { _registers.__cr = value; }
+  uint64_t  getLR() const         { return _registers.__lr; }
+  void      setLR(uint64_t value) { _registers.__lr = value; }
 
 private:
   struct ppc64_thread_state_t {
@@ -1811,6 +1815,13 @@ inline const char *Registers_ppc64::getRegisterName(int regNum) {
 /// process.
 class _LIBUNWIND_HIDDEN Registers_arm64;
 extern "C" void __libunwind_Registers_arm64_jumpto(Registers_arm64 *);
+
+#if defined(_LIBUNWIND_USE_GCS)
+extern "C" void *__libunwind_shstk_get_jump_target() {
+  return reinterpret_cast<void *>(&__libunwind_Registers_arm64_jumpto);
+}
+#endif
+
 class _LIBUNWIND_HIDDEN Registers_arm64 {
 public:
   Registers_arm64();
@@ -4115,7 +4126,7 @@ inline reg_t Registers_riscv::getRegister(int regNum) const {
     return _registers[regNum];
   if (regNum == UNW_RISCV_VLENB) {
     reg_t vlenb;
-    __asm__("csrr %0, 0xC22" : "=r"(vlenb));
+    __asm__ volatile("csrr %0, 0xC22" : "=r"(vlenb));
     return vlenb;
   }
   _LIBUNWIND_ABORT("unsupported riscv register");

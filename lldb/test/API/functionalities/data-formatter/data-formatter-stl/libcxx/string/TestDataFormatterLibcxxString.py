@@ -41,7 +41,6 @@ class LibcxxStringDataFormatterTestCase(TestBase):
             self.runCmd("type summary clear", check=False)
             self.runCmd("type filter clear", check=False)
             self.runCmd("type synth clear", check=False)
-            self.runCmd("settings set target.max-children-count 256", check=False)
 
         is_64_bit = self.process().GetAddressByteSize() == 8
 
@@ -66,11 +65,9 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 '(%s::wstring) IHaveEmbeddedZerosToo = L"hello world!\\0てざ ル゜䋨ミ㠧槊 きゅへ狦穤襩 じゃ馩リョ 䤦監"'
                 % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
-                # FIXME: This should have a 'u' prefix.
-                '(%s::u16string) u16_empty = ""' % ns,
+                '(%s::u16string) u16_empty = u""' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                # FIXME: This should have a 'U' prefix.
-                '(%s::u32string) u32_empty = ""' % ns,
+                '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )
@@ -83,21 +80,31 @@ class LibcxxStringDataFormatterTestCase(TestBase):
         uncappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(uncappedSummaryStream, summaryOptions)
         uncappedSummary = uncappedSummaryStream.GetData()
-        self.assertTrue(
-            uncappedSummary.find("someText") > 0,
+        self.assertGreater(
+            uncappedSummary.find("someText"),
+            0,
             "uncappedSummary does not include the full string",
         )
         summaryOptions.SetCapping(lldb.eTypeSummaryCapped)
         cappedSummaryStream = lldb.SBStream()
         TheVeryLongOne.GetSummary(cappedSummaryStream, summaryOptions)
         cappedSummary = cappedSummaryStream.GetData()
-        self.assertTrue(
-            cappedSummary.find("someText") <= 0,
-            "cappedSummary includes the full string",
+        self.assertLessEqual(
+            cappedSummary.find("someText"), 0, "cappedSummary includes the full string"
         )
 
         self.expect_expr(
             "s", result_type=ns + "::wstring", result_summary='L"hello world! מזל טוב!"'
+        )
+
+        self.expect_expr(
+            "q", result_type=ns + "::string", result_summary='"hello world"'
+        )
+
+        self.expect_expr(
+            "Q",
+            result_type=ns + "::string",
+            result_summary='"quite a long std::strin with lots of info inside it"',
         )
 
         self.expect(
@@ -114,7 +121,7 @@ class LibcxxStringDataFormatterTestCase(TestBase):
                 % ns,
                 '(%s::u16string) u16_string = u"ß水氶"' % ns,
                 '(%s::u32string) u32_string = U"🍄🍅🍆🍌"' % ns,
-                '(%s::u32string) u32_empty = ""' % ns,
+                '(%s::u32string) u32_empty = U""' % ns,
                 "(%s::string *) null_str = nullptr" % ns,
             ],
         )

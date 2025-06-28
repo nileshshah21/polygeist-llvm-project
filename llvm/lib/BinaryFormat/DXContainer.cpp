@@ -30,6 +30,56 @@ bool ShaderHash::isPopulated() {
   return Flags > 0 || 0 != memcmp(&Digest, &Zeros, 16);
 }
 
+#define COMPONENT_PRECISION(Val, Enum) {#Enum, SigMinPrecision::Enum},
+
+static const EnumEntry<SigMinPrecision> SigMinPrecisionNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigMinPrecision>> dxbc::getSigMinPrecisions() {
+  return ArrayRef(SigMinPrecisionNames);
+}
+
+#define D3D_SYSTEM_VALUE(Val, Enum) {#Enum, D3DSystemValue::Enum},
+
+static const EnumEntry<D3DSystemValue> D3DSystemValueNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<D3DSystemValue>> dxbc::getD3DSystemValues() {
+  return ArrayRef(D3DSystemValueNames);
+}
+
+#define COMPONENT_TYPE(Val, Enum) {#Enum, SigComponentType::Enum},
+
+static const EnumEntry<SigComponentType> SigComponentTypes[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<SigComponentType>> dxbc::getSigComponentTypes() {
+  return ArrayRef(SigComponentTypes);
+}
+
+#define SHADER_VISIBILITY(Val, Enum) {#Enum, ShaderVisibility::Enum},
+
+static const EnumEntry<ShaderVisibility> ShaderVisibilityValues[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<ShaderVisibility>> dxbc::getShaderVisibility() {
+  return ArrayRef(ShaderVisibilityValues);
+}
+
+#define ROOT_PARAMETER(Val, Enum) {#Enum, RootParameterType::Enum},
+
+static const EnumEntry<RootParameterType> RootParameterTypes[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<RootParameterType>> dxbc::getRootParameterTypes() {
+  return ArrayRef(RootParameterTypes);
+}
+
 #define SEMANTIC_KIND(Val, Enum) {#Enum, PSV::SemanticKind::Enum},
 
 static const EnumEntry<PSV::SemanticKind> SemanticKindNames[] = {
@@ -58,4 +108,24 @@ static const EnumEntry<PSV::InterpolationMode> InterpolationModeNames[] = {
 
 ArrayRef<EnumEntry<PSV::InterpolationMode>> PSV::getInterpolationModes() {
   return ArrayRef(InterpolationModeNames);
+}
+
+#define RESOURCE_TYPE(Val, Enum) {#Enum, PSV::ResourceType::Enum},
+
+static const EnumEntry<PSV::ResourceType> ResourceTypeNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<PSV::ResourceType>> PSV::getResourceTypes() {
+  return ArrayRef(ResourceTypeNames);
+}
+
+#define RESOURCE_KIND(Val, Enum) {#Enum, PSV::ResourceKind::Enum},
+
+static const EnumEntry<PSV::ResourceKind> ResourceKindNames[] = {
+#include "llvm/BinaryFormat/DXContainerConstants.def"
+};
+
+ArrayRef<EnumEntry<PSV::ResourceKind>> PSV::getResourceKinds() {
+  return ArrayRef(ResourceKindNames);
 }
